@@ -11,6 +11,9 @@ declare module 'unified' {
     bar?: boolean | undefined
     foo?: boolean | undefined
     qux?: boolean | undefined
+
+    date?: Date | undefined
+    nested?: Record<string, unknown> | undefined
   }
 }
 

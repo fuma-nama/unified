@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {unified} from 'unified'
+import {deepMerge} from '../lib/deep-merge.js'
 
 test('`use`', async function (t) {
   const givenOptions = {alpha: 'bravo', charlie: true, delta: 1}
@@ -284,6 +285,84 @@ test('`use`', async function (t) {
         .data(),
       {settings: {foo: false, bar: true, qux: true}}
     )
+
+    assert.deepEqual(
+      unified()
+        .use({
+          settings: {
+            date: new Date(),
+            nested: {
+              array: [],
+              array2: '',
+              obj: {},
+              map: new Map([['test', 'a']])
+            }
+          }
+        })
+        .use({
+          settings: {
+            date: undefined,
+            nested: {
+              array: ['test'],
+              array2: ['apple'],
+              obj: null,
+              map: new Map([['test', 'b']])
+            }
+          }
+        })
+        .data(),
+      {
+        settings: {
+          date: new Date(),
+          nested: {
+            array: ['test'],
+            array2: ['apple'],
+            obj: null,
+            map: new Map([['test', 'b']])
+          }
+        }
+      }
+    )
+  })
+
+  await t.test('should not merge inherited object properties', function () {
+    const settings = Object.create({alpha: true})
+    settings.bravo = true
+
+    assert.deepEqual(unified().use({settings}).data(), {
+      settings: {bravo: true}
+    })
+  })
+
+  await t.test(
+    'should keep object `__proto__` property in preset settings',
+    function () {
+      /** @type {import('unified').Settings} */
+      const settings = {}
+
+      Object.defineProperty(settings, '__proto__', {
+        enumerable: true,
+        value: {alpha: true}
+      })
+
+      const data = unified().use({settings}).data()
+      const descriptor = Object.getOwnPropertyDescriptor(
+        data.settings,
+        '__proto__'
+      )
+
+      assert(descriptor)
+      assert.equal(
+        Object.getPrototypeOf(data.settings),
+        Object.getPrototypeOf({})
+      )
+      assert.deepEqual(descriptor.value, {alpha: true})
+    }
+  )
+
+  // shouldn't happen in reality, just to ensure 100% test coverage
+  await t.test('should support non-object merge sources', function () {
+    assert.deepEqual(deepMerge({}, 'alpha'), {})
   })
 
   await t.test('should support extending presets', function () {
